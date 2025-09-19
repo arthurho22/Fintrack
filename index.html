@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuração FinTrack - Firebase e Vercel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <div class="container">
+            <nav>
+                <a href="#" class="logo">Fin<span>Track</span></a>
+                <div class="nav-links">
+                    <a href="#firebase">Firebase</a>
+                    <a href="#vercel">Vercel</a>
+                    <a href="#codigo">Código</a>
+                    <a href="#passos">Passos</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="container">
+            <h1>Configuração Firebase + Vercel</h1>
+            <p>Guia completo para integrar o Firebase ao seu projeto Next.js e fazer deploy no Vercel</p>
+        </div>
+    </section>
+
+    <section class="cards" id="firebase">
+        <div class="container">
+            <h2 class="section-heading">Configuração do Firebase</h2>
+            <div class="card-grid">
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-project-diagram"></i>
+                    </div>
+                    <h3>Criar Projeto no Firebase</h3>
+                    <p>Passos para configurar um novo projeto no Firebase Console</p>
+                    <ul>
+                        <li>Acesse console.firebase.google.com</li>
+                        <li>Clique em "Criar projeto" ou "Adicionar projeto"</li>
+                        <li>Defina um nome para seu projeto</li>
+                        <li>Configure o Google Analytics (opcional)</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h3>Configurar Firestore</h3>
+                    <p>Como configurar o banco de dados Firestore</p>
+                    <ul>
+                        <li>No menu lateral, clique em "Firestore Database"</li>
+                        <li>Clique em "Criar banco de dados"</li>
+                        <li>Escolha as regras de segurança (iniciar no modo teste)</li>
+                        <li>Selecione a localização do servidor</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-user-lock"></i>
+                    </div>
+                    <h3>Configurar Autenticação</h3>
+                    <p>Habilitar métodos de autenticação no Firebase</p>
+                    <ul>
+                        <li>No menu lateral, clique em "Authentication"</li>
+                        <li>Vá para a aba "Sign-in method"</li>
+                        <li>Habilite Provedor de e-mail/senha</li>
+                        <li>Configure Google e GitHub como provedores OAuth</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="code-section" id="codigo">
+        <div class="container">
+            <h2 class="section-heading">Configuração do Código</h2>
+            
+            <h3>Instalação de Dependências</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Terminal</span>
+                    <button class="copy-btn">Copiar</button>
+                </div>
+                <pre><code><span class="token comment"># Instalar dependências do Firebase</span>
+<span class="token function">npm</span> install firebase
+<span class="token comment"># ou</span>
+<span class="token function">yarn</span> add firebase
+
+<span class="token comment"># Instalar dependências para o Next.js (se necessário)</span>
+<span class="token function">npm</span> install next@latest react@latest react-dom@latest
+<span class="token function">npm</span> install --save-dev @types/node</code></pre>
+            </div>
+            
+            <h3>Configuração do Firebase</h3>
+            <div class="code-block">
+                <div class="code-header">
+                    <span>lib/firebase.js</span>
+                    <button class="copy-btn">Copiar</button>
+                </div>
+                <pre><code><span class="token comment">// Importar functions do Firebase</span>
+<span class="token keyword">import</span> { initializeApp } <span class="token keyword">from</span> <span class="token string">"firebase/app"</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> { getAuth } <span class="token keyword">from</span> <span class="token string">"firebase/auth"</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> { getFirestore } <span class="token keyword">from</span> <span class="token string">"firebase/firestore"</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Configuração do Firebase</span>
+<span class="token keyword">const</span> firebaseConfig <span class="token operator">=</span> <span class="token punctuation">{</span>
+  apiKey<span class="token punctuation">:</span> process<span class="token punctuation">.</span>env<span class="token punctuation">.</span><span class="token constant">NEXT_PUBLIC_FIREBASE_API_KEY</span><span class="token punctuation">,</span>
+  authDomain<span class="token punctuation">:</span> process<span class="token punctuation">.</span>env<span class="token punctuation">.</span><span class="token constant">NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN</span><span class="token punctuation">,</span>
+  projectId<span class="token punctuation">:</span> process<span class="token punctuation">.</span>env<span class="token punctuation">.</span><span class="token constant">NEXT_PUBLIC_FIREBASE_PROJECT_ID</span><span class="token punctuation">,</span>
+  storageBucket<span class="token punctuation">:</span> process<span class="token punctuation">.</span>env<span class="token punctuation">.</span><span class="token constant">NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET</span><span class="token punctuation">,</span>
+  messagingSenderId<span class="token punctuation">:</span> process<span class="token punctuation">.</span>env<span class="token punctuation">.</span><span class="token constant">NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID</span><span class="token punctuation">,</span>
+  appId<span class="token punctuation">:</span> process<span class="token punctuation">.</span>env<span class="token punctuation">.</span><span class="token constant">NEXT_PUBLIC_FIREBASE_APP_ID</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Inicializar Firebase</span>
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">initializeApp</span><span class="token punctuation">(</span>firebaseConfig<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Inicializar Authentication e Firestore</span>
+<span class="token keyword">const</span> auth <span class="token operator">=</span> <span class="token function">getAuth</span><span class="token punctuation">(</span>app<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> db <span class="token operator">=</span> <span class="token function">getFirestore</span><span class="token punctuation">(</span>app<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">export</span> { auth<span class="token punctuation">,</span> db }<span class="token punctuation">;</span>
+<span class="token keyword">export</span> <span class="token keyword">default</span> app<span class="token punctuation">;</span></code></pre>
+            </div>
+        </div>
+    </section>
+
+    <section class="steps" id="passos">
+        <div class="container">
+            <h2 class="section-heading">Passos para Configuração</h2>
+            
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Configurar Variáveis de Ambiente</h3>
+                    <p>Crie um arquivo <code>.env.local</code> na raiz do seu projeto Next.js e adicione as variáveis de ambiente do Firebase:</p>
+                    <div class="code-block">
+                        <pre><code><span class="token constant">NEXT_PUBLIC_FIREBASE_API_KEY</span><span class="token operator">=</span>sua_api_key_aqui
+<span class="token constant">NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN</span><span class="token operator">=</span>seu_projeto.firebaseapp.com
+<span class="token constant">NEXT_PUBLIC_FIREBASE_PROJECT_ID</span><span class="token operator">=</span>seu_project_id
+<span class="token constant">NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET</span><span class="token operator">=</span>seu_projeto.appspot.com
+<span class="token constant">NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID</span><span class="token operator">=</span>seu_sender_id
+<span class="token constant">NEXT_PUBLIC_FIREBASE_APP_ID</span><span class="token operator">=</span>sua_app_id</code></pre>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Configurar Regras do Firestore</h3>
+                    <p>No Firebase Console, vá para Firestore Database > Regras e configure as regras de segurança:</p>
+                    <div class="code-block">
+                        <pre><code>rules_version <span class="token operator">=</span> <span class="token string">'2'</span><span class="token punctuation">;</span>
+service cloud<span class="token punctuation">.</span>firestore <span class="token punctuation">{</span>
+  match <span class="token operator">/</span>databases<span class="token operator">/</span>{database}<span class="token operator">/</span>documents <span class="token punctuation">{</span>
+    <span class="token comment">// Permite leitura/gravação apenas para usuários autenticados</span>
+    match <span class="token operator">/</span>{document<span class="token operator">=</span><span class="token operator">**</span>} <span class="token punctuation">{</span>
+      allow read<span class="token punctuation">,</span> write<span class="token punctuation">:</span> if request<span class="token punctuation">.</span>auth <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span></code></pre>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Configurar Deploy no Vercel</h3>
+                    <p>Conecte seu repositório GitHub ao Vercel e configure as variáveis de ambiente:</p>
+                    <ul>
+                        <li>Acesse vercel.com e faça login com sua conta GitHub</li>
+                        <li>Clique em "Import Project" e selecione seu repositório</li>
+                        <li>Configure as variáveis de ambiente na seção "Environment Variables"</li>
+                        <li>Deixe as configurações padrão para um projeto Next.js</li>
+                        <li>Clique em "Deploy"</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cards" id="vercel">
+        <div class="container">
+            <h2 class="section-heading">Configuração do Vercel</h2>
+            <div class="card-grid">
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h3>Conectar Repositório</h3>
+                    <p>Como conectar seu repositório GitHub ao Vercel</p>
+                    <ul>
+                        <li>Faça login no Vercel com sua conta GitHub</li>
+                        <li>Clique em "New Project"</li>
+                        <li>Importe o repositório do seu projeto</li>
+                        <li>Configure o framework como Next.js</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <h3>Variáveis de Ambiente</h3>
+                    <p>Configurar as variáveis de ambiente no Vercel</p>
+                    <ul>
+                        <li>No dashboard do projeto, vá em Settings</li>
+                        <li>Selecione a aba "Environment Variables"</li>
+                        <li>Adicione todas as variáveis do Firebase</li>
+                        <li>Certifique-se de adicionar para ambiente de produção</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <div class="card-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <h3>Deploy Automático</h3>
+                    <p>Configurar deploy automático com GitHub</p>
+                    <ul>
+                        <li>O Vercel faz deploy automático a cada push no GitHub</li>
+                        <li>Preview deployments para cada pull request</li>
+                        <li>Rollback fácil para versões anteriores</li>
+                        <li>Domínio personalizável</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="container">
+            <h2>Pronto para Implementar?</h2>
+            <p>Agora que você configurou o Firebase e Vercel, é hora de implementar as funcionalidades no código</p>
+            <a href="#" class="btn btn-primary">Ver Documentação Completa</a>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-column">
+                    <h3>FinTrack</h3>
+                    <p>Sua plataforma inteligente de gestão financeira pessoal.</p>
+                </div>
+                <div class="footer-column">
+                    <h3>Recursos</h3>
+                    <ul>
+                        <li><a href="#">Documentação</a></li>
+                        <li><a href="#">Tutoriais</a></li>
+                        <li><a href="#">Exemplos</a></li>
+                    </ul>
+                </div>
+                <div class="footer-column">
+                    <h3>Links Úteis</h3>
+                    <ul>
+                        <li><a href="https://firebase.google.com/">Firebase</a></li>
+                        <li><a href="https://vercel.com/">Vercel</a></li>
+                        <li><a href="https://nextjs.org/">Next.js</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="copyright">
+                <p>&copy; 2023 FinTrack - Todos os direitos reservados</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.querySelectorAll('.copy-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const codeBlock = this.parentElement.nextElementSibling;
+                const textToCopy = codeBlock.textContent;
+                
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    const originalText = this.textContent;
+                    this.textContent = 'Copiado!';
+                    
+                    setTimeout(() => {
+                        this.textContent = originalText;
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Erro ao copiar texto: ', err);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
