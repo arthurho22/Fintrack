@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, signOut } from "../../firebase/config";
+import { auth } from "../../firebase/config";
+import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
@@ -75,4 +76,3 @@ export default function Dashboard() {
     </main>
   );
 }
-gi
