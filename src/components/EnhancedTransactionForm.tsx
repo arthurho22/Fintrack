@@ -28,7 +28,7 @@ export default function EnhancedTransactionForm({ onSubmitSuccess }: EnhancedTra
   const [amount, setAmount] = useState<number | "">("");
   const [type, setType] = useState<"income" | "expense">("expense");
   const [category, setCategory] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,12 +46,12 @@ export default function EnhancedTransactionForm({ onSubmitSuccess }: EnhancedTra
         date: new Date(date),
         createdAt: serverTimestamp(),
       });
-      
+
       setDescription("");
       setAmount("");
       setCategory("");
-      setDate(new Date().toISOString().split('T')[0]);
-      
+      setDate(new Date().toISOString().split("T")[0]);
+
       if (onSubmitSuccess) onSubmitSuccess();
     } catch (error: any) {
       console.error("Erro ao adicionar transação:", error);
@@ -61,7 +61,11 @@ export default function EnhancedTransactionForm({ onSubmitSuccess }: EnhancedTra
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+    <form 
+      onSubmit={handleSubmit} 
+      style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+    >
+      {/* Seleção de tipo */}
       <div>
         <label>
           <input
@@ -83,6 +87,7 @@ export default function EnhancedTransactionForm({ onSubmitSuccess }: EnhancedTra
         </label>
       </div>
 
+      {/* Descrição */}
       <Input
         value={description}
         onChange={(e) => setDescription(e.target.value)}
@@ -100,8 +105,8 @@ export default function EnhancedTransactionForm({ onSubmitSuccess }: EnhancedTra
         required
       />
 
-      <select 
-        value={category} 
+      <select
+        value={category}
         onChange={(e) => setCategory(e.target.value)}
         style={{ padding: "0.5rem", borderRadius: "4px" }}
       >

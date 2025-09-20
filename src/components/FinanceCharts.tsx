@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from 'react';
-import Chart from 'chart.js/auto';
+import { Chart } from 'chart.js/auto';
 
 interface Transaction {
   id: string;
@@ -19,8 +19,9 @@ interface FinanceChartsProps {
 export default function FinanceCharts({ transactions }: FinanceChartsProps) {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const pieChartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<Chart>();
-  const pieChartInstance = useRef<Chart>();
+  const chartInstance = useRef<Chart | null>(null);
+const pieChartInstance = useRef<Chart | null>(null);
+
 
   useEffect(() => {
     if (!transactions.length) return;

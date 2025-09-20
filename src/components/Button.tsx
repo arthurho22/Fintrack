@@ -1,20 +1,22 @@
-"use client";
+import React from "react";
 
-interface ButtonProps {
-  onClick?: () => void;
-  children: React.ReactNode;
-  type?: "button" | "submit";
-  variant?: "primary" | "secondary";
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "primary" | "secondary"; 
 }
 
-export default function Button({ onClick, children, type = "button", variant = "primary" }: ButtonProps) {
-  const styles = variant === "primary"
-    ? "bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-    : "border border-blue-500 text-blue-500 px-4 py-2 rounded hover:bg-blue-50";
+const Button: React.FC<ButtonProps> = ({ children, variant = "primary", ...props }) => {
+  const baseStyle =
+    "px-4 py-2 rounded font-semibold transition-colors duration-200";
+  const variants = {
+    primary: "bg-blue-600 text-white hover:bg-blue-700",
+    secondary: "bg-gray-200 text-gray-800 hover:bg-gray-300",
+  };
 
   return (
-    <button type={type} onClick={onClick} className={styles}>
+    <button className={`${baseStyle} ${variants[variant]}`} {...props}>
       {children}
     </button>
   );
-}
+};
+
+export default Button;
