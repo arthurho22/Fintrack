@@ -1,3 +1,6 @@
+
+import { ToastProvider } from '../contexts/ToastContext';
+
 export const metadata = {
   title: 'FinTrack - Gestão Financeira',
   description: 'Sistema de gestão de gastos pessoais',
@@ -11,7 +14,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body style={{ margin: 0, fontFamily: 'Arial, sans-serif' }}>
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </body>
     </html>
   )
