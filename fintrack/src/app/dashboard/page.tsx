@@ -1,325 +1,589 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
-import { auth, db } from "../../firebase/config";
-import { Auth, signOut } from "firebase/auth";
-import { useRouter } from "next/navigation";
-import { collection, query, where, onSnapshot, orderBy } from "firebase/firestore";
-import Navbar from "../../components/navbar";
-import Footer from "../../components/footer";
-import Button from "../../components/Button";
-import Formularios from "../../components/formularios";
-import TransactionCard from "../../components/TransationalCard";
+import { auth } from "../../firebase/config";
+import { onAuthStateChanged } from "firebase/auth";
+import { getTransactions } from "../../firebase/transactions";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import { Bar, Line, Doughnut } from "react-chartjs-2";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
+  ArcElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 interface Transaction {
   id: string;
-  description: string;
-  amount: number;
   type: "income" | "expense";
-  date: any;
-  category?: string;
+  category: string;
+  amount: number;
+  description: string;
+  date: Date;
 }
 
-export default function Dashboard() {
-  const router = useRouter();
-  const [user, setUser] = useState<any>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [totalIncome, setTotalIncome] = useState(0);
-  const [totalExpenses, setTotalExpenses] = useState(0);
-  const [balance, setBalance] = useState(0);
-  const [showForm, setShowForm] = useState(false);
+export default function DashboardPage() {
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        if (!user.emailVerified) {
-          router.push("/verify-email");
-          return;
-        }
-        setUser(user);
-        fetchTransactions(user.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "/login";
       } else {
-        router.push("/login");
-      }
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [router]);
-
-  const fetchTransactions = (userId: string) => {
-    const q = query(
-      collection(db, "transactions"),
-      where("userId", "==", userId),
-      orderBy("date", "desc")
-    );
-
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const transactionsData: Transaction[] = [];
-      let income = 0;
-      let expenses = 0;
-
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        transactionsData.push({
-          id: doc.id,
-          ...data
-        } as Transaction);
-
-        if (data.type === "income") {
-          income += data.amount;
-        } else {
-          expenses += data.amount;
+        setUserEmail(user.email);
+        try {
+          const userTransactions = await getTransactions();
+          setTransactions(userTransactions);
+        } catch (error) {
+          console.error("Erro ao carregar transações:", error);
         }
-      });
-
-      setTransactions(transactionsData);
-      setTotalIncome(income);
-      setTotalExpenses(expenses);
-      setBalance(income - expenses);
+        setIsLoading(false);
+      }
     });
+    return () => unsubscribe();
+  }, []);
 
-    return unsubscribe;
+  const totalIncome = transactions
+    .filter((t) => t.type === "income")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const totalExpenses = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const balance = totalIncome - totalExpenses;
+
+  const expensesByCategory = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((acc, t) => {
+      acc[t.category] = (acc[t.category] || 0) + t.amount;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const monthlyData = transactions.reduce((acc, t) => {
+    const month = t.date.toISOString().substring(0, 7);
+    if (!acc[month]) acc[month] = { income: 0, expenses: 0 };
+    if (t.type === "income") acc[month].income += t.amount;
+    else acc[month].expenses += t.amount;
+    return acc;
+  }, {} as Record<string, { income: number; expenses: number }>);
+
+  const sortedMonths = Object.keys(monthlyData).sort();
+
+  const barChartData = {
+    labels: Object.keys(expensesByCategory),
+    datasets: [{
+      label: "Gastos por Categoria (R$)",
+      data: Object.values(expensesByCategory),
+      backgroundColor: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FECA57", "#FF9FF3", "#54A0FF"],
+      borderWidth: 0,
+      borderRadius: 8,
+    }],
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push("/login");
-    } catch (error) {
-      console.error("Erro ao fazer logout:", error);
-    }
+  const lineChartData = {
+    labels: sortedMonths.map((month) => {
+      const [year, monthNum] = month.split("-");
+      return `${monthNum}/${year}`;
+    }),
+    datasets: [
+      {
+        label: "Receitas",
+        data: sortedMonths.map((month) => monthlyData[month].income),
+        borderColor: "#00D2A0",
+        backgroundColor: "rgba(0, 210, 160, 0.1)",
+        tension: 0.4,
+        fill: true,
+        borderWidth: 3,
+      },
+      {
+        label: "Despesas",
+        data: sortedMonths.map((month) => monthlyData[month].expenses),
+        borderColor: "#FF6B6B",
+        backgroundColor: "rgba(255, 107, 107, 0.1)",
+        tension: 0.4,
+        fill: true,
+        borderWidth: 3,
+      },
+    ],
   };
 
-  const handleTransactionAdded = () => {
-    setShowForm(false);
+  const doughnutData = {
+    labels: ["Receitas", "Despesas"],
+    datasets: [{
+      data: [totalIncome, totalExpenses],
+      backgroundColor: ["#00D2A0", "#FF6B6B"],
+      borderWidth: 0,
+      cutout: "70%",
+    }],
   };
 
-  const handleVerifyEmail = () => {
-    router.push("/verify-email");
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: "top" as const,
+        labels: {
+          usePointStyle: true,
+          padding: 20,
+          font: {
+            size: 12,
+            family: "'Inter', sans-serif",
+          },
+        },
+      },
+      tooltip: {
+        backgroundColor: "rgba(0,0,0,0.8)",
+        titleFont: { size: 14 },
+        bodyFont: { size: 14 },
+        padding: 12,
+        cornerRadius: 8,
+      },
+    },
   };
 
   if (isLoading) {
     return (
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "center", 
-        alignItems: "center", 
-        height: "100vh",
-        flexDirection: "column",
-        gap: "1rem"
-      }}>
-        <div style={{ 
-          width: "40px", 
-          height: "40px", 
-          border: "4px solid #f3f3f3", 
-          borderTop: "4px solid #0070f3", 
-          borderRadius: "50%", 
-          animation: "spin 1s linear infinite" 
-        }}></div>
-        <p>Carregando dashboard...</p>
-        <style jsx>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+      <div style={styles.loadingContainer}>
+        <div style={styles.spinner}></div>
+        <p style={styles.loadingText}>Carregando dashboard...</p>
       </div>
     );
   }
 
-  if (!user) {
-    return null;
-  }
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      <Navbar />
-      
-      <main style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "2rem", gap: "1.5rem" }}>
-        <header style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center",
-          width: "100%", 
-          maxWidth: "1000px",
-          padding: "1rem",
-          backgroundColor: "white",
-          borderRadius: "8px",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-        }}>
-          <div>
-            <h1 style={{ margin: 0, color: "#0070f3" }}>Dashboard FinTrack</h1>
-            <p style={{ margin: "0.5rem 0 0 0", color: "#666" }}>
-              Olá, <strong>{user.displayName || user.email}</strong>
-            </p>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginTop: "0.5rem" }}>
-              <span style={{ 
-                padding: "0.25rem 0.5rem", 
-                backgroundColor: user.emailVerified ? "#d4edda" : "#fff3cd", 
-                color: user.emailVerified ? "#155724" : "#856404",
-                borderRadius: "4px",
-                fontSize: "0.8rem",
-                fontWeight: "bold"
-              }}>
-                {user.emailVerified ? "✅ E-mail verificado" : "⚠ E-mail não verificado"}
-              </span>
-              {!user.emailVerified && (
-                <Button onClick={handleVerifyEmail} variant="secondary" style={{ padding: "0.25rem 0.5rem", fontSize: "0.8rem" }}>
-                  Verificar
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-            <Button onClick={() => setShowForm(!showForm)} variant="primary">
-              {showForm ? "❌ Cancelar" : "➕ Nova Transação"}
-            </Button>
-            <Button onClick={handleLogout} variant="secondary">
-              🚪 Sair
-            </Button>
-          </div>
-        </header>
-
-        <section style={{ 
-          display: "flex", 
-          gap: "1rem", 
-          flexWrap: "wrap", 
-          maxWidth: "1000px", 
-          width: "100%" 
-        }}>
-          <div style={{ 
-            flex: "1 1 200px", 
-            padding: "1.5rem", 
-            border: "1px solid #e0e0e0", 
-            borderRadius: "8px",
-            backgroundColor: "white",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            textAlign: "center"
-          }}>
-            <h3 style={{ margin: "0 0 1rem 0", color: "#666" }}>Saldo Total</h3>
-            <p style={{ 
-              color: balance >= 0 ? "#10b981" : "#ef4444", 
-              fontSize: "2rem", 
+    <main style={styles.container}>
+      <header style={styles.header}>
+        <div>
+          <h1 style={styles.title}>💰 FinTrack Dashboard</h1>
+          <p style={styles.subtitle}>Bem-vindo, {userEmail}</p>
+          <small style={styles.transactionCount}>
+            {transactions.length} transações • Saldo: 
+            <span style={{ 
+              color: balance >= 0 ? "#00D2A0" : "#FF6B6B", 
               fontWeight: "bold",
-              margin: 0
+              marginLeft: "5px"
             }}>
               R$ {balance.toFixed(2)}
-            </p>
-          </div>
-          
-          <div style={{ 
-            flex: "1 1 200px", 
-            padding: "1.5rem", 
-            border: "1px solid #e0e0e0", 
-            borderRadius: "8px",
-            backgroundColor: "white",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            textAlign: "center"
-          }}>
-            <h3 style={{ margin: "0 0 1rem 0", color: "#666" }}>Receitas</h3>
-            <p style={{ 
-              color: "#10b981", 
-              fontSize: "2rem", 
-              fontWeight: "bold",
-              margin: 0
-            }}>
-              R$ {totalIncome.toFixed(2)}
-            </p>
-          </div>
-          
-          <div style={{ 
-            flex: "1 1 200px", 
-            padding: "1.5rem", 
-            border: "1px solid #e0e0e0", 
-            borderRadius: "8px",
-            backgroundColor: "white",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            textAlign: "center"
-          }}>
-            <h3 style={{ margin: "0 0 1rem 0", color: "#666" }}>Despesas</h3>
-            <p style={{ 
-              color: "#ef4444", 
-              fontSize: "2rem", 
-              fontWeight: "bold",
-              margin: 0
-            }}>
-              R$ {totalExpenses.toFixed(2)}
-            </p>
-          </div>
-        </section>
-
-        {showForm && (
-          <section style={{ 
-            maxWidth: "1000px", 
-            width: "100%",
-            padding: "1.5rem",
-            backgroundColor: "white",
-            borderRadius: "8px",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-          }}>
-            <h3 style={{ margin: "0 0 1rem 0" }}>Adicionar Nova Transação</h3>
-            <Formularios onSubmitSuccess={handleTransactionAdded} />
-          </section>
-        )}
-
-        <section style={{ 
-          maxWidth: "1000px", 
-          width: "100%",
-          padding: "1.5rem",
-          backgroundColor: "white",
-          borderRadius: "8px",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-        }}>
-          <div style={{ 
-            display: "flex", 
-            justifyContent: "space-between", 
-            alignItems: "center", 
-            marginBottom: "1.5rem" 
-          }}>
-            <h3 style={{ margin: 0 }}>Últimas Transações</h3>
-            <span style={{ color: "#666", fontSize: "0.9rem" }}>
-              {transactions.length} transação{transactions.length !== 1 ? 's' : ''}
             </span>
+          </small>
+        </div>
+        <div style={styles.headerButtons}>
+          <button style={styles.primaryButton} onClick={() => window.location.href = "/transactions"}>
+            📊 Ver Todas as Transações
+          </button>
+          <button style={styles.secondaryButton} onClick={() => window.location.href = "/profile"}>
+            ⚙️ Configurações
+          </button>
+        </div>
+      </header>
+
+      <div style={styles.cardsGrid}>
+        <div style={styles.card}>
+          <div style={styles.cardIcon}>📈</div>
+          <div>
+            <h3 style={styles.cardLabel}>Receitas Totais</h3>
+            <p style={styles.cardValue}>R$ {totalIncome.toFixed(2)}</p>
+            <small style={styles.cardSubtext}>
+              {transactions.filter(t => t.type === "income").length} entradas
+            </small>
           </div>
+        </div>
 
-          {transactions.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              {transactions.map((transaction) => (
-                <TransactionCard
-                  key={transaction.id}
-                  description={transaction.description}
-                  amount={transaction.amount}
-                  type={transaction.type}
-                />
-              ))}
-            </div>
-          ) : (
-            <div style={{ 
-              textAlign: "center", 
-              padding: "3rem", 
-              color: "#666",
-              border: "2px dashed #e0e0e0",
-              borderRadius: "8px"
-            }}>
-              <p style={{ fontSize: "1.2rem", margin: "0 0 0.5rem 0" }}>📊 Nenhuma transação encontrada</p>
-              <p>Comece adicionando sua primeira transação!</p>
-              <Button onClick={() => setShowForm(true)} variant="primary" style={{ marginTop: "1rem" }}>
-                ➕ Adicionar Primeira Transação
-              </Button>
-            </div>
-          )}
-        </section>
-      </main>
+        <div style={styles.card}>
+          <div style={styles.cardIcon}>📉</div>
+          <div>
+            <h3 style={styles.cardLabel}>Despesas Totais</h3>
+            <p style={styles.cardValue}>R$ {totalExpenses.toFixed(2)}</p>
+            <small style={styles.cardSubtext}>
+              {transactions.filter(t => t.type === "expense").length} saídas
+            </small>
+          </div>
+        </div>
 
-      <Footer />
-    </div>
+        <div style={{...styles.card, background: balance >= 0 ? 
+          "linear-gradient(135deg, #00D2A0, #00B894)" : 
+          "linear-gradient(135deg, #FF6B6B, #FF4757)"}}>
+          <div style={styles.cardIcon}>{balance >= 0 ? "✅" : "⚠️"}</div>
+          <div>
+            <h3 style={styles.cardLabel}>Saldo Atual</h3>
+            <p style={styles.cardValue}>R$ {balance.toFixed(2)}</p>
+            <small style={styles.cardSubtext}>
+              {balance >= 0 ? "Financeiramente saudável" : "Atenção necessária"}
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <div style={styles.chartsGrid}>
+        <div style={styles.chartContainer}>
+          <h3 style={styles.chartTitle}>📋 Gastos por Categoria</h3>
+          <div style={styles.chartWrapper}>
+            <Bar data={barChartData} options={chartOptions} />
+          </div>
+        </div>
+
+        <div style={styles.chartContainer}>
+          <h3 style={styles.chartTitle}>🔄 Receitas vs Despesas</h3>
+          <div style={styles.chartWrapper}>
+            <Doughnut data={doughnutData} options={chartOptions} />
+          </div>
+        </div>
+
+        <div style={{...styles.chartContainer, gridColumn: "1 / -1"}}>
+          <h3 style={styles.chartTitle}>📈 Evolução Mensal</h3>
+          <div style={styles.chartWrapper}>
+            <Line data={lineChartData} options={chartOptions} />
+          </div>
+        </div>
+      </div>
+
+      <section style={styles.transactionsSection}>
+        <div style={styles.sectionHeader}>
+          <h3 style={styles.sectionTitle}>🕒 Últimas Transações</h3>
+          <span style={styles.sectionSubtitle}>
+            {transactions.length} transações no total
+          </span>
+        </div>
+
+        {transactions.length === 0 ? (
+          <div style={styles.emptyState}>
+            <div style={styles.emptyIcon}>💸</div>
+            <h4 style={styles.emptyTitle}>Nenhuma transação encontrada</h4>
+            <p style={styles.emptyText}>Comece adicionando sua primeira transação!</p>
+            <button style={styles.addButton} onClick={() => window.location.href = "/transactions"}>
+              + Nova Transação
+            </button>
+          </div>
+        ) : (
+          <div style={styles.transactionsList}>
+            {transactions.slice(0, 8).map((transaction) => (
+              <div key={transaction.id} style={styles.transactionItem}>
+                <div style={styles.transactionIcon}>
+                  {transaction.type === "income" ? "💵" : "💳"}
+                </div>
+                <div style={styles.transactionInfo}>
+                  <strong style={styles.transactionCategory}>{transaction.category}</strong>
+                  <span style={styles.transactionDescription}>{transaction.description}</span>
+                  <small style={styles.transactionDate}>
+                    {transaction.date.toLocaleDateString("pt-BR")}
+                  </small>
+                </div>
+                <span style={{
+                  ...styles.transactionAmount,
+                  color: transaction.type === "income" ? "#00D2A0" : "#FF6B6B"
+                }}>
+                  {transaction.type === "income" ? "+" : "-"} R$ {transaction.amount.toFixed(2)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </main>
   );
 }
 
-function onAuthStateChanged(auth: Auth, arg1: (user: any) => void) {
-  throw new Error("Function not implemented.");
-}
+const styles = {
+  container: {
+    padding: "2rem",
+    maxWidth: "1400px",
+    margin: "0 auto",
+    fontFamily: "'Inter', sans-serif",
+    backgroundColor: "#f8fafc",
+    minHeight: "100vh",
+  },
+  
+  loadingContainer: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "100vh",
+    flexDirection: "column" as const,
+    gap: "1rem",
+  },
+  
+  spinner: {
+    width: "50px",
+    height: "50px",
+    border: "5px solid #f3f3f3",
+    borderTop: "5px solid #00D2A0",
+    borderRadius: "50%",
+    animation: "spin 1s linear infinite",
+  },
+  
+  loadingText: {
+    color: "#6b7280",
+    fontSize: "1.1rem",
+  },
+  
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: "2rem",
+    padding: "2rem",
+    background: "white",
+    borderRadius: "16px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+  },
+  
+  title: {
+    margin: "0 0 0.5rem 0",
+    color: "#1a202c",
+    fontSize: "2rem",
+    fontWeight: "700",
+  },
+  
+  subtitle: {
+    margin: "0 0 0.5rem 0",
+    color: "#718096",
+    fontSize: "1.1rem",
+  },
+  
+  transactionCount: {
+    color: "#a0aec0",
+    fontSize: "0.9rem",
+  },
+  
+  headerButtons: {
+    display: "flex",
+    gap: "1rem",
+  },
+  
+  primaryButton: {
+    padding: "0.75rem 1.5rem",
+    background: "linear-gradient(135deg, #00D2A0, #00B894)",
+    color: "white",
+    border: "none",
+    borderRadius: "12px",
+    cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "0.9rem",
+    transition: "all 0.3s",
+  },
+  
+  secondaryButton: {
+    padding: "0.75rem 1.5rem",
+    background: "transparent",
+    color: "#4a5568",
+    border: "2px solid #e2e8f0",
+    borderRadius: "12px",
+    cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "0.9rem",
+    transition: "all 0.3s",
+  },
+  
+  cardsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "1.5rem",
+    marginBottom: "2rem",
+  },
+  
+  card: {
+    display: "flex",
+    alignItems: "center",
+    gap: "1rem",
+    padding: "1.5rem",
+    background: "white",
+    borderRadius: "16px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+  },
+  
+  cardIcon: {
+    fontSize: "2rem",
+    width: "60px",
+    height: "60px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "#f7fafc",
+    borderRadius: "12px",
+  },
+  
+  cardLabel: {
+    margin: "0 0 0.5rem 0",
+    fontSize: "0.9rem",
+    color: "#718096",
+    fontWeight: "600",
+  },
+  
+  cardValue: {
+    margin: "0 0 0.25rem 0",
+    fontSize: "1.5rem",
+    fontWeight: "700",
+    color: "#1a202c",
+  },
+  
+  cardSubtext: {
+    color: "#a0aec0",
+    fontSize: "0.8rem",
+  },
+  
+  chartsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+    gap: "1.5rem",
+    marginBottom: "2rem",
+  },
+  
+  chartContainer: {
+    background: "white",
+    padding: "1.5rem",
+    borderRadius: "16px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+  },
+  
+  chartTitle: {
+    margin: "0 0 1rem 0",
+    fontSize: "1.1rem",
+    fontWeight: "600",
+    color: "#2d3748",
+  },
+  
+  chartWrapper: {
+    height: "300px",
+  },
+  
+  transactionsSection: {
+    background: "white",
+    padding: "2rem",
+    borderRadius: "16px",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+  },
+  
+  sectionHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "1.5rem",
+  },
+  
+  sectionTitle: {
+    margin: "0",
+    fontSize: "1.3rem",
+    fontWeight: "600",
+    color: "#2d3748",
+  },
+  
+  sectionSubtitle: {
+    color: "#718096",
+    fontSize: "0.9rem",
+  },
+  
+  emptyState: {
+    textAlign: "center" as const,
+    padding: "3rem",
+    color: "#a0aec0",
+  },
+  
+  emptyIcon: {
+    fontSize: "3rem",
+    marginBottom: "1rem",
+  },
+  
+  emptyTitle: {
+    margin: "0 0 0.5rem 0",
+    fontSize: "1.2rem",
+  },
+  
+  emptyText: {
+    margin: "0 0 1.5rem 0",
+  },
+  
+  addButton: {
+    padding: "0.75rem 1.5rem",
+    background: "linear-gradient(135deg, #00D2A0, #00B894)",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "600",
+  },
+  
+  transactionsList: {
+    display: "grid",
+    gap: "0.75rem",
+  },
+  
+  transactionItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "1rem",
+    padding: "1rem",
+    background: "#f7fafc",
+    borderRadius: "12px",
+    transition: "all 0.2s",
+  },
+  
+  transactionIcon: {
+    fontSize: "1.5rem",
+    width: "48px",
+    height: "48px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "white",
+    borderRadius: "10px",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+  },
+  
+  transactionInfo: {
+    flex: 1,
+  },
+  
+  transactionCategory: {
+    display: "block",
+    fontSize: "1rem",
+    fontWeight: "600",
+    color: "#2d3748",
+    marginBottom: "0.25rem",
+  },
+  
+  transactionDescription: {
+    display: "block",
+    fontSize: "0.85rem",
+    color: "#718096",
+    marginBottom: "0.25rem",
+  },
+  
+  transactionDate: {
+    fontSize: "0.8rem",
+    color: "#a0aec0",
+  },
+  
+  transactionAmount: {
+    fontSize: "1.1rem",
+    fontWeight: "700",
+  },
+};
+
+const styleSheet = document.styleSheets[0];
+styleSheet.insertRule(`
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+`, styleSheet.cssRules.length);
