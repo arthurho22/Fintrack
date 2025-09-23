@@ -5,15 +5,13 @@ import {
   query, 
   where, 
   orderBy,
-  Timestamp,
-  deleteDoc,
-  doc 
-} from "firebase/firestore";
-import { db, auth } from "../firebase/config";
+  Timestamp 
+} from 'firebase/firestore';
+import { db, auth } from './config';
 
 export interface Transaction {
-  id: string;
-  type: "income" | "expense";
+  id: string; 
+  type: 'income' | 'expense';
   category: string;
   amount: number;
   description: string;
@@ -22,47 +20,60 @@ export interface Transaction {
 }
 
 export const getTransactions = async (): Promise<Transaction[]> => {
-  const user = auth.currentUser;
-  if (!user) throw new Error("Usuário não autenticado");
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      console.log('Usuário não autenticado');
+      return [];
+    }
 
-  const q = query(
-    collection(db, "transactions"),
-    where("userId", "==", user.uid),
-    orderBy("date", "desc")
-  );
+    console.log('Buscando transações para usuário:', user.uid);
+    
+    const q = query(
+      collection(db, 'transactions'),
+      where('userId', '==', user.uid),
+      orderBy('date', 'desc')
+    );
+    
+    const querySnapshot = await getDocs(q);
 
-  const querySnapshot = await getDocs(q);
-
-  return querySnapshot.docs.map((docSnap) => {
-    const data = docSnap.data();
-    return {
-      id: docSnap.id,
-      type: data.type,
-      category: data.category,
-      amount: data.amount,
-      description: data.description,
-      date: data.date.toDate(),
-      userId: data.userId,
-    };
-  });
+    const transactions: Transaction[] = querySnapshot.docs.map((doc) => {
+      const data = doc.data();
+      console.log('Transação encontrada:', data);
+      
+      return {
+        id: doc.id,
+        type: data.type,
+        category: data.category,
+        amount: data.amount,
+        description: data.description,
+        date: data.date?.toDate() || new Date(),
+        userId: data.userId,
+      };
+    });
+    
+    console.log(`Total de transações encontradas: ${transactions.length}`);
+    return transactions;
+  } catch (error) {
+    console.error('Erro ao buscar transações:', error);
+    return [];
+  }
 };
 
-export const addTransaction = async (
-  transaction: Omit<Transaction, "id" | "userId">
-): Promise<void> => {
-  const user = auth.currentUser;
-  if (!user) throw new Error("Usuário não autenticado");
+export const addTransaction = async (transaction: Omit<Transaction, 'id' | 'userId'>): Promise<string> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('Usuário não autenticado');
 
-  await addDoc(collection(db, "transactions"), {
-    ...transaction,
-    userId: user.uid,
-    date: Timestamp.fromDate(transaction.date),
-  });
-};
+    const docRef = await addDoc(collection(db, 'transactions'), {
+      ...transaction,
+      userId: user.uid,
+      date: Timestamp.fromDate(transaction.date),
+    });
 
-export const deleteTransaction = async (transactionId: string): Promise<void> => {
-  const user = auth.currentUser;
-  if (!user) throw new Error("Usuário não autenticado");
-
-  await deleteDoc(doc(db, "transactions", transactionId));
+    return docRef.id;
+  } catch (error) {
+    console.error('Erro ao adicionar transação:', error);
+    throw error;
+  }
 };

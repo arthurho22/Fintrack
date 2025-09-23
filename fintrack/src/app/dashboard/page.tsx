@@ -50,15 +50,18 @@ export default function DashboardPage() {
         window.location.href = "/login";
       } else {
         setUserEmail(user.email);
+
         try {
           const userTransactions = await getTransactions();
           setTransactions(userTransactions);
         } catch (error) {
           console.error("Erro ao carregar transações:", error);
         }
+
         setIsLoading(false);
       }
     });
+
     return () => unsubscribe();
   }, []);
 
@@ -82,8 +85,10 @@ export default function DashboardPage() {
   const monthlyData = transactions.reduce((acc, t) => {
     const month = t.date.toISOString().substring(0, 7);
     if (!acc[month]) acc[month] = { income: 0, expenses: 0 };
+
     if (t.type === "income") acc[month].income += t.amount;
     else acc[month].expenses += t.amount;
+
     return acc;
   }, {} as Record<string, { income: number; expenses: number }>);
 
@@ -91,13 +96,22 @@ export default function DashboardPage() {
 
   const barChartData = {
     labels: Object.keys(expensesByCategory),
-    datasets: [{
-      label: "Gastos por Categoria (R$)",
-      data: Object.values(expensesByCategory),
-      backgroundColor: ["#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FECA57", "#FF9FF3", "#54A0FF"],
-      borderWidth: 0,
-      borderRadius: 8,
-    }],
+    datasets: [
+      {
+        label: "Gastos por Categoria (R$)",
+        data: Object.values(expensesByCategory),
+        backgroundColor: [
+          "#FF6384",
+          "#36A2EB",
+          "#FFCE56",
+          "#4BC0C0",
+          "#9966FF",
+          "#FF9F40",
+          "#C9CBCF",
+        ],
+        borderWidth: 1,
+      },
+    ],
   };
 
   const lineChartData = {
@@ -109,32 +123,33 @@ export default function DashboardPage() {
       {
         label: "Receitas",
         data: sortedMonths.map((month) => monthlyData[month].income),
-        borderColor: "#00D2A0",
-        backgroundColor: "rgba(0, 210, 160, 0.1)",
-        tension: 0.4,
+        borderColor: "#10B981",
+        backgroundColor: "rgba(16, 185, 129, 0.1)",
+        tension: 0.1,
         fill: true,
-        borderWidth: 3,
       },
       {
         label: "Despesas",
         data: sortedMonths.map((month) => monthlyData[month].expenses),
-        borderColor: "#FF6B6B",
-        backgroundColor: "rgba(255, 107, 107, 0.1)",
-        tension: 0.4,
+        borderColor: "#EF4444",
+        backgroundColor: "rgba(239, 68, 68, 0.1)",
+        tension: 0.1,
         fill: true,
-        borderWidth: 3,
       },
     ],
   };
 
   const doughnutData = {
     labels: ["Receitas", "Despesas"],
-    datasets: [{
-      data: [totalIncome, totalExpenses],
-      backgroundColor: ["#00D2A0", "#FF6B6B"],
-      borderWidth: 0,
-      cutout: "70%",
-    }],
+    datasets: [
+      {
+        data: [totalIncome, totalExpenses],
+        backgroundColor: ["#10B981", "#EF4444"],
+        hoverBackgroundColor: ["#0DA271", "#DC2626"],
+        borderWidth: 2,
+        borderColor: "#ffffff",
+      },
+    ],
   };
 
   const chartOptions = {
@@ -143,447 +158,272 @@ export default function DashboardPage() {
     plugins: {
       legend: {
         position: "top" as const,
-        labels: {
-          usePointStyle: true,
-          padding: 20,
-          font: {
-            size: 12,
-            family: "'Inter', sans-serif",
-          },
-        },
       },
       tooltip: {
-        backgroundColor: "rgba(0,0,0,0.8)",
-        titleFont: { size: 14 },
-        bodyFont: { size: 14 },
-        padding: 12,
-        cornerRadius: 8,
+        callbacks: {
+          label: function (context: any) {
+            return `R$ ${context.raw.toFixed(2)}`;
+          },
+        },
       },
     },
   };
 
   if (isLoading) {
     return (
-      <div style={styles.loadingContainer}>
-        <div style={styles.spinner}></div>
-        <p style={styles.loadingText}>Carregando dashboard...</p>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+          flexDirection: "column",
+          gap: "1rem",
+        }}
+      >
+        <div
+          style={{
+            width: "50px",
+            height: "50px",
+            border: "5px solid #f3f3f3",
+            borderTop: "5px solid #3b82f6",
+            borderRadius: "50%",
+            animation: "spin 1s linear infinite",
+          }}
+        ></div>
+        <p style={{ color: "#6b7280", fontSize: "1.1rem" }}>
+          Carregando seus dados...
+        </p>
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
       </div>
     );
   }
 
   return (
-    <main style={styles.container}>
-      <header style={styles.header}>
+    <main
+      style={{
+        padding: "2rem",
+        maxWidth: "1400px",
+        margin: "0 auto",
+        fontFamily: "Arial, sans-serif",
+        backgroundColor: "#f8fafc",
+        minHeight: "100vh",
+      }}
+    >
+      <header
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "2rem",
+          padding: "1.5rem",
+          background: "white",
+          borderRadius: "12px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        }}
+      >
         <div>
-          <h1 style={styles.title}>💰 FinTrack Dashboard</h1>
-          <p style={styles.subtitle}>Bem-vindo, {userEmail}</p>
-          <small style={styles.transactionCount}>
-            {transactions.length} transações • Saldo: 
-            <span style={{ 
-              color: balance >= 0 ? "#00D2A0" : "#FF6B6B", 
-              fontWeight: "bold",
-              marginLeft: "5px"
-            }}>
-              R$ {balance.toFixed(2)}
-            </span>
+          <h1 style={{ margin: 0, color: "#1f2937" }}>📊 Dashboard Financeiro</h1>
+          <p style={{ margin: "0.5rem 0 0 0", color: "#6b7280" }}>
+            Bem-vindo, {userEmail}
+          </p>
+          <small style={{ color: "#9ca3af" }}>
+            {transactions.length} transações encontradas
           </small>
         </div>
-        <div style={styles.headerButtons}>
-          <button style={styles.primaryButton} onClick={() => window.location.href = "/transactions"}>
-            📊 Ver Todas as Transações
+        <div style={{ display: "flex", gap: "1rem" }}>
+          <button
+            onClick={() => (window.location.href = "/transactions")}
+            style={{
+              padding: "0.75rem 1.5rem",
+              background: "#3b82f6",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "600",
+            }}
+          >
+            💳 Transações
           </button>
-          <button style={styles.secondaryButton} onClick={() => window.location.href = "/profile"}>
-            ⚙️ Configurações
+          <button
+            onClick={() => (window.location.href = "/profile")}
+            style={{
+              padding: "0.75rem 1.5rem",
+              background: "#8b5cf6",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontWeight: "600",
+            }}
+          >
+            👤 Perfil
           </button>
         </div>
       </header>
 
-      <div style={styles.cardsGrid}>
-        <div style={styles.card}>
-          <div style={styles.cardIcon}>📈</div>
-          <div>
-            <h3 style={styles.cardLabel}>Receitas Totais</h3>
-            <p style={styles.cardValue}>R$ {totalIncome.toFixed(2)}</p>
-            <small style={styles.cardSubtext}>
-              {transactions.filter(t => t.type === "income").length} entradas
-            </small>
-          </div>
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+          gap: "1.5rem",
+          marginBottom: "2rem",
+        }}
+      >
+        <div
+          style={{
+            background: "linear-gradient(135deg, #10B981, #059669)",
+            color: "white",
+            padding: "1.5rem",
+            borderRadius: "12px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          }}
+        >
+          <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "0.9rem", opacity: 0.9 }}>
+            Receitas Totais
+          </h3>
+          <p style={{ margin: 0, fontSize: "2rem", fontWeight: "bold" }}>
+            R$ {totalIncome.toFixed(2)}
+          </p>
         </div>
 
-        <div style={styles.card}>
-          <div style={styles.cardIcon}>📉</div>
-          <div>
-            <h3 style={styles.cardLabel}>Despesas Totais</h3>
-            <p style={styles.cardValue}>R$ {totalExpenses.toFixed(2)}</p>
-            <small style={styles.cardSubtext}>
-              {transactions.filter(t => t.type === "expense").length} saídas
-            </small>
-          </div>
+        <div
+          style={{
+            background: "linear-gradient(135deg, #EF4444, #DC2626)",
+            color: "white",
+            padding: "1.5rem",
+            borderRadius: "12px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          }}
+        >
+          <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "0.9rem", opacity: 0.9 }}>
+            Despesas Totais
+          </h3>
+          <p style={{ margin: 0, fontSize: "2rem", fontWeight: "bold" }}>
+            R$ {totalExpenses.toFixed(2)}
+          </p>
         </div>
 
-        <div style={{...styles.card, background: balance >= 0 ? 
-          "linear-gradient(135deg, #00D2A0, #00B894)" : 
-          "linear-gradient(135deg, #FF6B6B, #FF4757)"}}>
-          <div style={styles.cardIcon}>{balance >= 0 ? "✅" : "⚠️"}</div>
-          <div>
-            <h3 style={styles.cardLabel}>Saldo Atual</h3>
-            <p style={styles.cardValue}>R$ {balance.toFixed(2)}</p>
-            <small style={styles.cardSubtext}>
-              {balance >= 0 ? "Financeiramente saudável" : "Atenção necessária"}
-            </small>
-          </div>
+        <div
+          style={{
+            background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+            color: "white",
+            padding: "1.5rem",
+            borderRadius: "12px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          }}
+        >
+          <h3 style={{ margin: "0 0 0.5rem 0", fontSize: "0.9rem", opacity: 0.9 }}>
+            Saldo Atual
+          </h3>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "2rem",
+              fontWeight: "bold",
+              color: balance >= 0 ? "#10B981" : "#EF4444",
+            }}
+          >
+            R$ {balance.toFixed(2)}
+          </p>
         </div>
-      </div>
+      </section>
 
-      <div style={styles.chartsGrid}>
-        <div style={styles.chartContainer}>
-          <h3 style={styles.chartTitle}>📋 Gastos por Categoria</h3>
-          <div style={styles.chartWrapper}>
-            <Bar data={barChartData} options={chartOptions} />
-          </div>
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
+          gap: "1.5rem",
+          marginBottom: "2rem",
+        }}
+      >
+        <div
+          style={{
+            background: "white",
+            padding: "1.5rem",
+            borderRadius: "12px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            height: "400px",
+          }}
+        >
+          <h3 style={{ margin: "0 0 1rem 0" }}>Gastos por Categoria</h3>
+          <Bar data={barChartData} options={chartOptions} />
         </div>
 
-        <div style={styles.chartContainer}>
-          <h3 style={styles.chartTitle}>🔄 Receitas vs Despesas</h3>
-          <div style={styles.chartWrapper}>
-            <Doughnut data={doughnutData} options={chartOptions} />
-          </div>
+        <div
+          style={{
+            background: "white",
+            padding: "1.5rem",
+            borderRadius: "12px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            height: "400px",
+          }}
+        >
+          <h3 style={{ margin: "0 0 1rem 0" }}>Receitas vs Despesas</h3>
+          <Doughnut data={doughnutData} options={chartOptions} />
         </div>
 
-        <div style={{...styles.chartContainer, gridColumn: "1 / -1"}}>
-          <h3 style={styles.chartTitle}>📈 Evolução Mensal</h3>
-          <div style={styles.chartWrapper}>
-            <Line data={lineChartData} options={chartOptions} />
-          </div>
+        <div
+          style={{
+            background: "white",
+            padding: "1.5rem",
+            borderRadius: "12px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            gridColumn: "1 / -1",
+            height: "400px",
+          }}
+        >
+          <h3 style={{ margin: "0 0 1rem 0" }}>Evolução Mensal</h3>
+          <Line data={lineChartData} options={chartOptions} />
         </div>
-      </div>
+      </section>
 
-      <section style={styles.transactionsSection}>
-        <div style={styles.sectionHeader}>
-          <h3 style={styles.sectionTitle}>🕒 Últimas Transações</h3>
-          <span style={styles.sectionSubtitle}>
-            {transactions.length} transações no total
-          </span>
-        </div>
-
-        {transactions.length === 0 ? (
-          <div style={styles.emptyState}>
-            <div style={styles.emptyIcon}>💸</div>
-            <h4 style={styles.emptyTitle}>Nenhuma transação encontrada</h4>
-            <p style={styles.emptyText}>Comece adicionando sua primeira transação!</p>
-            <button style={styles.addButton} onClick={() => window.location.href = "/transactions"}>
-              + Nova Transação
-            </button>
-          </div>
-        ) : (
-          <div style={styles.transactionsList}>
-            {transactions.slice(0, 8).map((transaction) => (
-              <div key={transaction.id} style={styles.transactionItem}>
-                <div style={styles.transactionIcon}>
-                  {transaction.type === "income" ? "💵" : "💳"}
+      <section
+        style={{
+          background: "white",
+          padding: "1.5rem",
+          borderRadius: "12px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        }}
+      >
+        <h3 style={{ margin: "0 0 1rem 0" }}>Últimas Transações</h3>
+        <div style={{ display: "grid", gap: "0.5rem" }}>
+          {transactions.slice(0, 5).map((transaction) => (
+            <div
+              key={transaction.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "1rem",
+                background: "#f8fafc",
+                borderRadius: "8px",
+              }}
+            >
+              <div>
+                <strong>{transaction.category}</strong>
+                <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>
+                  {transaction.date.toLocaleDateString("pt-BR")}
                 </div>
-                <div style={styles.transactionInfo}>
-                  <strong style={styles.transactionCategory}>{transaction.category}</strong>
-                  <span style={styles.transactionDescription}>{transaction.description}</span>
-                  <small style={styles.transactionDate}>
-                    {transaction.date.toLocaleDateString("pt-BR")}
-                  </small>
-                </div>
-                <span style={{
-                  ...styles.transactionAmount,
-                  color: transaction.type === "income" ? "#00D2A0" : "#FF6B6B"
-                }}>
-                  {transaction.type === "income" ? "+" : "-"} R$ {transaction.amount.toFixed(2)}
-                </span>
               </div>
-            ))}
-          </div>
-        )}
+              <span
+                style={{
+                  color: transaction.type === "income" ? "#10B981" : "#EF4444",
+                  fontWeight: "bold",
+                }}
+              >
+                {transaction.type === "income" ? "+" : "-"} R$ {transaction.amount.toFixed(2)}
+              </span>
+            </div>
+          ))}
+        </div>
       </section>
     </main>
   );
 }
-
-const styles = {
-  container: {
-    padding: "2rem",
-    maxWidth: "1400px",
-    margin: "0 auto",
-    fontFamily: "'Inter', sans-serif",
-    backgroundColor: "#f8fafc",
-    minHeight: "100vh",
-  },
-  
-  loadingContainer: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    height: "100vh",
-    flexDirection: "column" as const,
-    gap: "1rem",
-  },
-  
-  spinner: {
-    width: "50px",
-    height: "50px",
-    border: "5px solid #f3f3f3",
-    borderTop: "5px solid #00D2A0",
-    borderRadius: "50%",
-    animation: "spin 1s linear infinite",
-  },
-  
-  loadingText: {
-    color: "#6b7280",
-    fontSize: "1.1rem",
-  },
-  
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: "2rem",
-    padding: "2rem",
-    background: "white",
-    borderRadius: "16px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-  },
-  
-  title: {
-    margin: "0 0 0.5rem 0",
-    color: "#1a202c",
-    fontSize: "2rem",
-    fontWeight: "700",
-  },
-  
-  subtitle: {
-    margin: "0 0 0.5rem 0",
-    color: "#718096",
-    fontSize: "1.1rem",
-  },
-  
-  transactionCount: {
-    color: "#a0aec0",
-    fontSize: "0.9rem",
-  },
-  
-  headerButtons: {
-    display: "flex",
-    gap: "1rem",
-  },
-  
-  primaryButton: {
-    padding: "0.75rem 1.5rem",
-    background: "linear-gradient(135deg, #00D2A0, #00B894)",
-    color: "white",
-    border: "none",
-    borderRadius: "12px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "0.9rem",
-    transition: "all 0.3s",
-  },
-  
-  secondaryButton: {
-    padding: "0.75rem 1.5rem",
-    background: "transparent",
-    color: "#4a5568",
-    border: "2px solid #e2e8f0",
-    borderRadius: "12px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "0.9rem",
-    transition: "all 0.3s",
-  },
-  
-  cardsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: "1.5rem",
-    marginBottom: "2rem",
-  },
-  
-  card: {
-    display: "flex",
-    alignItems: "center",
-    gap: "1rem",
-    padding: "1.5rem",
-    background: "white",
-    borderRadius: "16px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-  },
-  
-  cardIcon: {
-    fontSize: "2rem",
-    width: "60px",
-    height: "60px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "#f7fafc",
-    borderRadius: "12px",
-  },
-  
-  cardLabel: {
-    margin: "0 0 0.5rem 0",
-    fontSize: "0.9rem",
-    color: "#718096",
-    fontWeight: "600",
-  },
-  
-  cardValue: {
-    margin: "0 0 0.25rem 0",
-    fontSize: "1.5rem",
-    fontWeight: "700",
-    color: "#1a202c",
-  },
-  
-  cardSubtext: {
-    color: "#a0aec0",
-    fontSize: "0.8rem",
-  },
-  
-  chartsGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-    gap: "1.5rem",
-    marginBottom: "2rem",
-  },
-  
-  chartContainer: {
-    background: "white",
-    padding: "1.5rem",
-    borderRadius: "16px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-  },
-  
-  chartTitle: {
-    margin: "0 0 1rem 0",
-    fontSize: "1.1rem",
-    fontWeight: "600",
-    color: "#2d3748",
-  },
-  
-  chartWrapper: {
-    height: "300px",
-  },
-  
-  transactionsSection: {
-    background: "white",
-    padding: "2rem",
-    borderRadius: "16px",
-    boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-  },
-  
-  sectionHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "1.5rem",
-  },
-  
-  sectionTitle: {
-    margin: "0",
-    fontSize: "1.3rem",
-    fontWeight: "600",
-    color: "#2d3748",
-  },
-  
-  sectionSubtitle: {
-    color: "#718096",
-    fontSize: "0.9rem",
-  },
-  
-  emptyState: {
-    textAlign: "center" as const,
-    padding: "3rem",
-    color: "#a0aec0",
-  },
-  
-  emptyIcon: {
-    fontSize: "3rem",
-    marginBottom: "1rem",
-  },
-  
-  emptyTitle: {
-    margin: "0 0 0.5rem 0",
-    fontSize: "1.2rem",
-  },
-  
-  emptyText: {
-    margin: "0 0 1.5rem 0",
-  },
-  
-  addButton: {
-    padding: "0.75rem 1.5rem",
-    background: "linear-gradient(135deg, #00D2A0, #00B894)",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
-  },
-  
-  transactionsList: {
-    display: "grid",
-    gap: "0.75rem",
-  },
-  
-  transactionItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "1rem",
-    padding: "1rem",
-    background: "#f7fafc",
-    borderRadius: "12px",
-    transition: "all 0.2s",
-  },
-  
-  transactionIcon: {
-    fontSize: "1.5rem",
-    width: "48px",
-    height: "48px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "white",
-    borderRadius: "10px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-  },
-  
-  transactionInfo: {
-    flex: 1,
-  },
-  
-  transactionCategory: {
-    display: "block",
-    fontSize: "1rem",
-    fontWeight: "600",
-    color: "#2d3748",
-    marginBottom: "0.25rem",
-  },
-  
-  transactionDescription: {
-    display: "block",
-    fontSize: "0.85rem",
-    color: "#718096",
-    marginBottom: "0.25rem",
-  },
-  
-  transactionDate: {
-    fontSize: "0.8rem",
-    color: "#a0aec0",
-  },
-  
-  transactionAmount: {
-    fontSize: "1.1rem",
-    fontWeight: "700",
-  },
-};
-
-const styleSheet = document.styleSheets[0];
-styleSheet.insertRule(`
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`, styleSheet.cssRules.length);
