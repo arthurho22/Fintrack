@@ -7,8 +7,6 @@ import { auth } from "../../firebase/config";
 import { useRouter } from "next/navigation";
 import Button from "../../components/Button";
 import Input from "../../components/Input";
-import SocialLogin from "../../components/SocialLogin";
-import { useToast } from "../../contexts/ToastContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -17,7 +15,6 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const router = useRouter();
-  const { addToast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +23,8 @@ export default function Login() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      addToast("Login realizado com sucesso!", "success");
+      // Toast simplificado
+      alert("Login realizado com sucesso!");
       router.push("/dashboard");
     } catch (error: any) {
       const message = 
@@ -36,7 +34,7 @@ export default function Login() {
         'Erro ao fazer login';
       
       setError(message);
-      addToast(message, "error");
+      alert(message);
     } finally {
       setIsLoading(false);
     }
@@ -51,12 +49,12 @@ export default function Login() {
     try {
       await sendPasswordResetEmail(auth, email);
       setResetEmailSent(true);
-      addToast("E-mail de recuperação enviado!", "success");
+      alert("E-mail de recuperação enviado!");
     } catch (error: any) {
       const message = error.code === 'auth/user-not-found' ? 
         'E-mail não encontrado' : 'Erro ao enviar e-mail';
       setError(message);
-      addToast(message, "error");
+      alert(message);
     }
   };
 
@@ -101,7 +99,22 @@ export default function Login() {
         </Button>
       </form>
       
-      <SocialLogin />
+      {/* BOTÕES SIMPLES DE LOGIN SOCIAL (SEM COMPONENTE) */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+          <div style={{ flex: 1, height: "1px", backgroundColor: "#e0e0e0" }}></div>
+          <span style={{ color: "#666", fontSize: "0.9rem" }}>Em breve</span>
+          <div style={{ flex: 1, height: "1px", backgroundColor: "#e0e0e0" }}></div>
+        </div>
+        
+        <Button variant="secondary" disabled style={{ opacity: 0.6 }}>
+          🔵 Login com Google (em breve)
+        </Button>
+        
+        <Button variant="secondary" disabled style={{ opacity: 0.6 }}>
+          ⚫ Login com GitHub (em breve)
+        </Button>
+      </div>
       
       <div style={{ marginTop: "1rem", textAlign: "center" }}>
         <button 

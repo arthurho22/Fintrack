@@ -16,6 +16,7 @@ export default function SocialLogin() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
+      // Verificar se é um novo usuário
       const userDoc = await getDoc(doc(db, "users", user.uid));
       
       if (!userDoc.exists()) {
@@ -71,12 +72,7 @@ export default function SocialLogin() {
       <Button 
         onClick={handleGoogleLogin} 
         variant="secondary"
-        style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center",
-          gap: "0.5rem"
-        }}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
       >
         <span>🔵</span> Continuar com Google
       </Button>
@@ -84,12 +80,7 @@ export default function SocialLogin() {
       <Button 
         onClick={handleGitHubLogin} 
         variant="secondary"
-        style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "center",
-          gap: "0.5rem"
-        }}
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}
       >
         <span>⚫</span> Continuar com GitHub
       </Button>

@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useEffect, useRef } from 'react';
-import { Chart } from 'chart.js/auto';
+import Chart from 'chart.js/auto';
 
 interface Transaction {
   id: string;
@@ -19,104 +20,101 @@ interface FinanceChartsProps {
 export default function FinanceCharts({ transactions }: FinanceChartsProps) {
   const chartRef = useRef<HTMLCanvasElement>(null);
   const pieChartRef = useRef<HTMLCanvasElement>(null);
-  const chartInstance = useRef<Chart | null>(null);
-const pieChartInstance = useRef<Chart | null>(null);
-
+  const chartInstance = useRef<Chart>();
+  const pieChartInstance = useRef<Chart>();
 
   useEffect(() => {
-    if (!transactions.length) return;
+    if (!transactions.length || !chartRef.current || !pieChartRef.current) return;
 
     const monthlyData = processMonthlyData(transactions);
     const categoryData = processCategoryData(transactions);
 
-    if (chartRef.current) {
+    const ctx = chartRef.current.getContext('2d');
+    if (ctx) {
       if (chartInstance.current) {
         chartInstance.current.destroy();
       }
 
-      const ctx = chartRef.current.getContext('2d');
-      if (ctx) {
-        chartInstance.current = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: monthlyData.labels,
-            datasets: [
-              {
-                label: 'Receitas',
-                data: monthlyData.income,
-                backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1
-              },
-              {
-                label: 'Despesas',
-                data: monthlyData.expenses,
-                backgroundColor: 'rgba(255, 99, 132, 0.6)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 1
-              }
-            ]
+      chartInstance.current = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: monthlyData.labels,
+          datasets: [
+            {
+              label: 'Receitas',
+              data: monthlyData.income,
+              backgroundColor: '#10b981',
+              borderColor: '#047857',
+              borderWidth: 1
+            },
+            {
+              label: 'Despesas',
+              data: monthlyData.expenses,
+              backgroundColor: '#ef4444',
+              borderColor: '#dc2626',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Receitas vs Despesas por Mês',
+              font: { size: 16 }
+            },
+            legend: {
+              position: 'top'
+            }
           },
-          options: {
-            responsive: true,
-            plugins: {
+          scales: {
+            y: {
+              beginAtZero: true,
               title: {
                 display: true,
-                text: 'Receitas vs Despesas por Mês'
-              },
-              legend: {
-                position: 'top'
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                title: {
-                  display: true,
-                  text: 'Valor (R$)'
-                }
+                text: 'Valor (R$)'
               }
             }
           }
-        });
-      }
+        }
+      });
     }
 
-    if (pieChartRef.current) {
+    const pieCtx = pieChartRef.current.getContext('2d');
+    if (pieCtx && categoryData.labels.length > 0) {
       if (pieChartInstance.current) {
         pieChartInstance.current.destroy();
       }
 
-      const ctx = pieChartRef.current.getContext('2d');
-      if (ctx && categoryData.labels.length > 0) {
-        pieChartInstance.current = new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: categoryData.labels,
-            datasets: [{
-              data: categoryData.values,
-              backgroundColor: [
-                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-                '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
-                '#FF6384', '#36A2EB', '#FFCE56'
-              ],
-              borderWidth: 1
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              title: {
-                display: true,
-                text: 'Despesas por Categoria'
-              },
-              legend: {
-                position: 'right'
-              }
+      pieChartInstance.current = new Chart(pieCtx, {
+        type: 'pie',
+        data: {
+          labels: categoryData.labels,
+          datasets: [{
+            data: categoryData.values,
+            backgroundColor: [
+              '#3b82f6', '#ef4444', '#10b981', '#f59e0b',
+              '#8b5cf6', '#06b6d4', '#f97316', '#84cc16',
+              '#ec4899', '#6366f1'
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            title: {
+              display: true,
+              text: 'Despesas por Categoria',
+              font: { size: 16 }
+            },
+            legend: {
+              position: 'right'
             }
           }
-        });
-      }
+        }
+      });
     }
 
     return () => {
@@ -133,7 +131,9 @@ const pieChartInstance = useRef<Chart | null>(null);
     const monthlyData: { [key: string]: { income: number; expenses: number } } = {};
     
     transactions.forEach(transaction => {
-      if (transaction.date) {
+      if (!transaction.date) return;
+      
+      try {
         const date = transaction.date.toDate ? transaction.date.toDate() : new Date(transaction.date);
         const monthYear = `${date.getMonth() + 1}/${date.getFullYear()}`;
         
@@ -146,6 +146,8 @@ const pieChartInstance = useRef<Chart | null>(null);
         } else {
           monthlyData[monthYear].expenses += transaction.amount;
         }
+      } catch (error) {
+        console.error('Erro ao processar data:', error);
       }
     });
     
@@ -160,51 +162,78 @@ const pieChartInstance = useRef<Chart | null>(null);
     const categoryData: { [key: string]: number } = {};
     
     transactions.forEach(transaction => {
-      if (transaction.type === 'expense' && transaction.category) {
-        const category = transaction.category || 'Outros';
+      if (transaction.type === 'expense') {
+        const category = transaction.category || 'Outras';
         categoryData[category] = (categoryData[category] || 0) + transaction.amount;
       }
     });
     
-    const labels = Object.keys(categoryData);
-    const values = Object.values(categoryData);
+    // Ordenar por valor (maior para menor)
+    const sortedEntries = Object.entries(categoryData)
+      .sort(([,a], [,b]) => b - a);
     
-    return { labels, values };
+    return {
+      labels: sortedEntries.map(([label]) => label),
+      values: sortedEntries.map(([,value]) => value)
+    };
   };
 
   if (transactions.length === 0) {
     return (
       <div style={{ 
-        padding: '2rem', 
         textAlign: 'center', 
-        backgroundColor: '#f8f9fa', 
+        padding: '3rem', 
+        color: '#666',
+        backgroundColor: 'white',
         borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         margin: '2rem 0'
       }}>
-        <p>Nenhuma transação encontrada para exibir gráficos.</p>
+        <h3>📊 Gráficos Financeiros</h3>
+        <p>Adicione transações para visualizar os gráficos</p>
       </div>
     );
   }
 
   return (
     <div style={{ 
-      display: 'grid', 
-      gridTemplateColumns: '1fr 1fr', 
-      gap: '2rem', 
-      margin: '2rem 0',
       backgroundColor: 'white',
-      padding: '2rem',
       borderRadius: '8px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      padding: '1.5rem',
+      margin: '2rem 0'
     }}>
-      <div>
-        <h3 style={{ textAlign: 'center', marginBottom: '1rem' }}>Receitas vs Despesas</h3>
-        <canvas ref={chartRef} style={{ width: '100%', height: '300px' }} />
+      <h3 style={{ margin: '0 0 1.5rem 0', textAlign: 'center' }}>📊 Análise Financeira</h3>
+      
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '1fr 1fr', 
+        gap: '2rem',
+        alignItems: 'start'
+      }}>
+        <div>
+          <div style={{ height: '300px' }}>
+            <canvas ref={chartRef} />
+          </div>
+        </div>
+        
+        <div>
+          <div style={{ height: '300px' }}>
+            <canvas ref={pieChartRef} />
+          </div>
+        </div>
       </div>
-      <div>
-        <h3 style={{ textAlign: 'center', marginBottom: '1rem' }}>Despesas por Categoria</h3>
-        <canvas ref={pieChartRef} style={{ width: '100%', height: '300px' }} />
-      </div>
+      
+      {transactions.filter(t => t.type === 'expense').length === 0 && (
+        <p style={{ 
+          textAlign: 'center', 
+          color: '#666', 
+          marginTop: '1rem',
+          fontStyle: 'italic'
+        }}>
+          💡 Adicione despesas para ver a distribuição por categoria
+        </p>
+      )}
     </div>
   );
 }

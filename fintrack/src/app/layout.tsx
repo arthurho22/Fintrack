@@ -1,5 +1,5 @@
 
-import { ToastProvider } from '../contexts/ToastContext';
+import { ToastProvider } from '../context/ToastContext';
 
 export const metadata = {
   title: 'FinTrack - Gestão Financeira',
