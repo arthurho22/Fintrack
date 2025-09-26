@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { 
+  signInWithEmailAndPassword, 
+  sendPasswordResetEmail,
+  signInWithPopup,
+  GoogleAuthProvider,
+  GithubAuthProvider 
+} from "firebase/auth";
 import { auth } from "../../firebase/config";
 import { useRouter } from "next/navigation";
 
@@ -10,7 +16,8 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [resetEmailSent, setResetEmailSent] = useState(false);
+  const [isLoadingGoogle, setIsLoadingGoogle] = useState(false);
+  const [isLoadingGithub, setIsLoadingGithub] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -20,18 +27,46 @@ export default function Login() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      alert("Login realizado com sucesso!");
       router.push("/dashboard");
     } catch (error: any) {
       const message = 
         error.code === 'auth/invalid-credential' ? 'E-mail ou senha incorretos' :
         error.code === 'auth/user-not-found' ? 'Usuário não encontrado' :
-        error.code === 'auth/wrong-password' ? 'Senha incorreta' :
         'Erro ao fazer login';
       
       setError(message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setIsLoadingGoogle(true);
+    setError("");
+
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      router.push("/dashboard");
+    } catch (error: any) {
+      setError('Erro ao fazer login com Google');
+    } finally {
+      setIsLoadingGoogle(false);
+    }
+  };
+
+  const handleGithubLogin = async () => {
+    setIsLoadingGithub(true);
+    setError("");
+
+    try {
+      const provider = new GithubAuthProvider();
+      await signInWithPopup(auth, provider);
+      router.push("/dashboard");
+    } catch (error: any) {
+      setError('Erro ao fazer login com GitHub');
+    } finally {
+      setIsLoadingGithub(false);
     }
   };
 
@@ -43,47 +78,37 @@ export default function Login() {
 
     try {
       await sendPasswordResetEmail(auth, email);
-      setResetEmailSent(true);
-      alert("E-mail de recuperação enviado!");
+      alert("E-mail de recuperação enviado! Verifique sua caixa de entrada.");
     } catch (error: any) {
-      const message = error.code === 'auth/user-not-found' ? 
-        'E-mail não encontrado' : 'Erro ao enviar e-mail';
-      setError(message);
+      setError('Erro ao enviar e-mail de recuperação');
     }
   };
 
   return (
     <div style={styles.container}>
-      {/* Background Verde */}
       <div style={styles.background}></div>
       
-      {/* Card de Login */}
       <div style={styles.loginCard}>
-        {/* Header com Logo */}
         <div style={styles.header}>
-          <div style={styles.logo}>
-            💰
-          </div>
+          <div style={styles.logo}>💰</div>
           <h1 style={styles.title}>FinTrack</h1>
-          <p style={styles.subtitle}>Controle suas finanças de forma inteligente</p>
+          <p style={styles.subtitle}>Entre na sua conta</p>
         </div>
 
-        {/* Formulário */}
+        {/* Formulário de Login Tradicional - AGORA EM CIMA */}
         <form onSubmit={handleLogin} style={styles.form}>
           <div style={styles.inputGroup}>
-            <label style={styles.label}>E-mail</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
+              placeholder="Seu e-mail"
               style={styles.input}
               required
             />
           </div>
 
           <div style={styles.inputGroup}>
-            <label style={styles.label}>Senha</label>
             <input
               type="password"
               value={password}
@@ -95,15 +120,7 @@ export default function Login() {
           </div>
 
           {error && (
-            <div style={styles.errorBox}>
-              ⚠️ {error}
-            </div>
-          )}
-
-          {resetEmailSent && (
-            <div style={styles.successBox}>
-              ✅ E-mail de redefinição enviado! Verifique sua caixa de entrada.
-            </div>
+            <div style={styles.errorBox}>⚠️ {error}</div>
           )}
 
           <button 
@@ -114,49 +131,46 @@ export default function Login() {
             }}
             disabled={isLoading}
           >
-            {isLoading ? (
-              <>
-                <div style={styles.spinner}></div>
-                Entrando...
-              </>
-            ) : (
-              "🔓 Entrar na Minha Conta"
-            )}
+            {isLoading ? "⏳ Entrando..." : "🔓 Entrar com E-mail"}
           </button>
         </form>
 
-        {/* Links de Ação */}
-        <div style={styles.actionLinks}>
-          <button 
-            onClick={handleResetPassword} 
-            style={styles.resetButton}
-          >
-            🔑 Esqueci minha senha
-          </button>
-          
-          <div style={styles.signupLink}>
-            <span style={styles.signupText}>Não tem uma conta?</span>
-            <a href="/signup" style={styles.signupButton}>
-              📝 Cadastre-se gratuitamente
-            </a>
-          </div>
-        </div>
-
-        {/* Divisor */}
         <div style={styles.divider}>
           <span style={styles.dividerText}>ou entre com</span>
         </div>
 
-        {/* Botões Sociais */}
+        {/* Botões de Login Social - AGORA EMBAIXO */}
         <div style={styles.socialButtons}>
-          <button style={styles.googleButton}>
-            <span style={styles.googleIcon}>🔵</span>
-            Continuar com Google
+          <button 
+            onClick={handleGoogleLogin}
+            style={{
+              ...styles.socialButton,
+              ...styles.googleButton,
+              opacity: isLoadingGoogle ? 0.7 : 1
+            }}
+            disabled={isLoadingGoogle}
+          >
+            <span style={styles.socialIcon}>🔵</span>
+            {isLoadingGoogle ? "Conectando..." : "Google"}
           </button>
-          
-          <button style={styles.githubButton}>
-            <span style={styles.githubIcon}>⚫</span>
-            Continuar com GitHub
+
+          <button 
+            onClick={handleGithubLogin}
+            style={{
+              ...styles.socialButton,
+              ...styles.githubButton,
+              opacity: isLoadingGithub ? 0.7 : 1
+            }}
+            disabled={isLoadingGithub}
+          >
+            <span style={styles.socialIcon}>⚫</span>
+            {isLoadingGoogle ? "Conectando..." : "GitHub"}
+          </button>
+        </div>
+
+        <div style={styles.footer}>
+          <button onClick={handleResetPassword} style={styles.resetButton}>
+            Esqueci minha senha
           </button>
         </div>
       </div>
@@ -173,6 +187,7 @@ const styles = {
     position: 'relative' as const,
     fontFamily: "'Inter', sans-serif",
     padding: '1rem',
+    backgroundColor: "00D2A0",
   },
   
   background: {
@@ -181,39 +196,35 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'linear-gradient(135deg, #00D2A0 0%, #00B894 50%, #00A885 100%)',
+    background: 'linear-gradient(135deg, #00D2A0 0%, #00B894 100%)',
     zIndex: -1,
   },
   
   loginCard: {
     background: 'white',
-    padding: '3rem',
+    padding: '2.5rem',
     borderRadius: '20px',
     boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
     width: '100%',
-    maxWidth: '450px',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
+    maxWidth: '420px',
   },
   
   header: {
     textAlign: 'center' as const,
-    marginBottom: '2.5rem',
+    marginBottom: '2rem',
   },
   
   logo: {
-    fontSize: '4rem',
+    fontSize: '3.5rem',
     marginBottom: '1rem',
   },
   
   title: {
-    fontSize: '2.5rem',
+    fontSize: '2.2rem',
     fontWeight: '700',
     color: '#1a202c',
     margin: '0 0 0.5rem 0',
-    background: 'linear-gradient(135deg, #00D2A0, #00B894)',
-    backgroundClip: 'text',
-    WebkitBackgroundClip: 'text',
-    },
+  },
   
   subtitle: {
     color: '#718096',
@@ -224,7 +235,8 @@ const styles = {
   form: {
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: '1.5rem',
+    gap: '1.2rem',
+    marginBottom: '1.5rem',
   },
   
   inputGroup: {
@@ -233,23 +245,16 @@ const styles = {
     gap: '0.5rem',
   },
   
-  label: {
-    fontWeight: '600',
-    color: '#2d3748',
-    fontSize: '0.9rem',
-  },
-  
   input: {
     padding: '1rem',
     border: '2px solid #e2e8f0',
-    borderRadius: '12px',
+    borderRadius: '10px',
     fontSize: '1rem',
-    transition: 'all 0.3s ease',
+    transition: 'border-color 0.3s',
   },
   
   inputFocus: {
     borderColor: '#00D2A0',
-    boxShadow: '0 0 0 3px rgba(0, 210, 160, 0.1)',
   },
   
   errorBox: {
@@ -261,43 +266,75 @@ const styles = {
     textAlign: 'center' as const,
   },
   
-  successBox: {
-    background: '#c6f6d5',
-    color: '#2f855a',
-    padding: '1rem',
-    borderRadius: '8px',
-    fontSize: '0.9rem',
-    textAlign: 'center' as const,
-  },
-  
   submitButton: {
     background: 'linear-gradient(135deg, #00D2A0, #00B894)',
     color: 'white',
     border: 'none',
-    padding: '1.25rem 2rem',
-    borderRadius: '12px',
+    padding: '1.2rem 2rem',
+    borderRadius: '10px',
     fontSize: '1.1rem',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 0.3s ease',
+    transition: 'opacity 0.3s',
+    marginTop: '0.5rem',
+  },
+  
+  divider: {
+    position: 'relative' as const,
+    textAlign: 'center' as const,
+    margin: '2rem 0',
+  },
+  
+  dividerText: {
+    background: 'white',
+    padding: '0 1rem',
+    color: '#718096',
+    fontSize: '0.95rem',
+    fontWeight: '500',
+  },
+  
+  socialButtons: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '0.8rem',
+    marginBottom: '1.5rem',
+  },
+  
+  socialButton: {
+    padding: '1rem 1.5rem',
+    border: '2px solid #e2e8f0',
+    borderRadius: '10px',
+    fontSize: '1rem',
+    fontWeight: '600',
+    cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '0.5rem',
+    gap: '0.8rem',
+    transition: 'all 0.3s',
   },
   
-  spinner: {
-    width: '20px',
-    height: '20px',
-    border: '2px solid transparent',
-    borderTop: '2px solid white',
-    borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
+  socialIcon: {
+    fontSize: '1.2rem',
   },
   
-  actionLinks: {
+  googleButton: {
+    background: 'white',
+    color: '#4285F4',
+    borderColor: '#4285F4',
+  },
+  
+  githubButton: {
+    background: 'white',
+    color: '#333',
+    borderColor: '#333',
+  },
+  
+  footer: {
     marginTop: '2rem',
     textAlign: 'center' as const,
+    borderTop: '1px solid #e2e8f0',
+    paddingTop: '1.5rem',
   },
   
   resetButton: {
@@ -305,106 +342,8 @@ const styles = {
     border: 'none',
     color: '#00B894',
     cursor: 'pointer',
-    fontSize: '0.9rem',
+    fontSize: '1rem',
     textDecoration: 'underline',
-  },
-  
-  signupLink: {
-    marginTop: '1rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.5rem',
-    flexWrap: 'wrap' as const,
-  },
-  
-  signupText: {
-    color: '#718096',
-    fontSize: '0.9rem',
-  },
-  
-  signupButton: {
-    color: '#00B894',
-    fontWeight: '600',
-    textDecoration: 'none',
-  },
-  
-  divider: {
-    display: 'flex',
-    alignItems: 'center',
-    margin: '2rem 0',
-    color: '#a0aec0',
-  },
-  
-  dividerText: {
-    padding: '0 1rem',
-    background: 'white',
-    fontSize: '0.9rem',
-  },
-  
-  socialButtons: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: '1rem',
-  },
-  
-  googleButton: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.75rem',
-    padding: '1rem',
-    border: '2px solid #e2e8f0',
-    borderRadius: '12px',
-    background: 'white',
-    cursor: 'pointer',
-    fontSize: '1rem',
     fontWeight: '500',
-    transition: 'all 0.3s ease',
-  },
-  
-  githubButton: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.75rem',
-    padding: '1rem',
-    border: '2px solid #e2e8f0',
-    borderRadius: '12px',
-    background: 'white',
-    cursor: 'pointer',
-    fontSize: '1rem',
-    fontWeight: '500',
-    transition: 'all 0.3s ease',
-  },
-  
-  googleIcon: {
-    fontSize: '1.2rem',
-  },
-  
-  githubIcon: {
-    fontSize: '1.2rem',
   },
 };
-
-if (typeof document !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    input:focus {
-      border-color: #00D2A0 !important;
-      box-shadow: 0 0 0 3px rgba(0, 210, 160, 0.1) !important;
-      outline: none;
-    }
-    
-    button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-    }
-  `;
-  document.head.appendChild(style);
-}

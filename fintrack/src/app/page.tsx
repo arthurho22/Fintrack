@@ -1,28 +1,59 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { auth } from '../firebase/config';
+import { onAuthStateChanged } from 'firebase/auth';
 
 export default function Home() {
-  const [saldo, setSaldo] = useState(1250.75);
-  const [gastos, setGastos] = useState([
-    { id: 1, descricao: "Supermercado", valor: 320.5 },
-    { id: 2, descricao: "Transporte", valor: 80.0 },
-    { id: 3, descricao: "Lazer", valor: 150.0 },
-  ]);
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        router.push('/dashboard');
+      } else {
+        router.push('/login');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [router]);
 
   return (
-    <main style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>FinTrack - Dashboard</h1>
-      <h2>💰 Saldo atual: R$ {saldo.toFixed(2)}</h2>
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      height: '100vh',
+      background: 'linear-gradient(135deg, #00D2A0 0%, #00B894 100%)',
+      fontFamily: "'Inter', sans-serif"
+    }}>
+      <div style={{
+        textAlign: 'center',
+        color: 'white'
+      }}>
+        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>💰</div>
+        <h1 style={{ fontSize: '2.5rem', margin: '0 0 0.5rem 0', fontWeight: '700' }}>FinTrack</h1>
+        <p style={{ fontSize: '1.1rem', opacity: 0.9 }}>Redirecionando...</p>
+        
+        <div style={{
+          width: '40px',
+          height: '40px',
+          border: '3px solid rgba(255,255,255,0.3)',
+          borderTop: '3px solid white',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+          margin: '2rem auto'
+        }}></div>
+      </div>
 
-      <h3>📊 Últimos Gastos</h3>
-      <ul>
-        {gastos.map((g) => (
-          <li key={g.id}>
-            {g.descricao} - R$ {g.valor.toFixed(2)}
-          </li>
-        ))}
-      </ul>
-    </main>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
   );
 }
