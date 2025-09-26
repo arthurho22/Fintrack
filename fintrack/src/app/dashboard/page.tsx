@@ -26,6 +26,7 @@ export default function Dashboard() {
     type: 'income' as 'income' | 'expense',
     category: ''
   });
+  const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -53,7 +54,15 @@ export default function Dashboard() {
       const transactionsData: Transaction[] = [];
       
       querySnapshot.forEach((doc) => {
-        transactionsData.push({ id: doc.id, ...doc.data() } as Transaction);
+        const data = doc.data();
+        transactionsData.push({ 
+          id: doc.id, 
+          description: data.description,
+          amount: data.amount,
+          type: data.type,
+          category: data.category,
+          date: data.date
+        } as Transaction);
       });
       
       setTransactions(transactionsData);
@@ -64,24 +73,60 @@ export default function Dashboard() {
 
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    
+    if (!user) {
+      alert("Usuário não autenticado");
+      return;
+    }
+
+    if (!newTransaction.description.trim()) {
+      alert("Digite uma descrição");
+      return;
+    }
+
+    const amountValue = parseFloat(newTransaction.amount);
+    if (!newTransaction.amount || isNaN(amountValue) || amountValue <= 0) {
+      alert("Digite um valor válido maior que zero");
+      return;
+    }
+
+    if (!newTransaction.category.trim()) {
+      alert("Digite uma categoria");
+      return;
+    }
+
+    setIsSaving(true);
 
     try {
+      console.log("Adicionando transação:", newTransaction);
+      
       await addDoc(collection(db, "transactions"), {
-        description: newTransaction.description,
-        amount: parseFloat(newTransaction.amount),
+        description: newTransaction.description.trim(),
+        amount: amountValue,
         type: newTransaction.type,
-        category: newTransaction.category,
+        category: newTransaction.category.trim(),
         date: new Date().toISOString(),
         userId: user.uid
       });
 
-      setNewTransaction({ description: '', amount: '', type: 'income', category: '' });
+      console.log("Transação adicionada com sucesso!");
+      
+      setNewTransaction({
+        description: '',
+        amount: '',
+        type: 'income',
+        category: ''
+      });
+      
       setShowAddTransaction(false);
+      
       await loadTransactions(user.uid);
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error("Erro ao adicionar transação:", error);
-      alert("Erro ao adicionar transação");
+      alert("Erro ao adicionar transação. Verifique o console para mais detalhes.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -267,14 +312,27 @@ export default function Dashboard() {
           <div style={styles.quickActions}>
             <h3 style={styles.actionsTitle}>Ações Rápidas</h3>
             <button 
-              onClick={() => setShowAddTransaction(true)}
+              onClick={() => {
+                setNewTransaction({
+                  description: '',
+                  amount: '',
+                  type: 'income',
+                  category: ''
+                });
+                setShowAddTransaction(true);
+              }}
               style={styles.quickButton}
             >
               💰 Adicionar Receita
             </button>
             <button 
               onClick={() => {
-                setNewTransaction({...newTransaction, type: 'expense'});
+                setNewTransaction({
+                  description: '',
+                  amount: '',
+                  type: 'expense',
+                  category: ''
+                });
                 setShowAddTransaction(true);
               }}
               style={{...styles.quickButton, ...styles.expenseQuickButton}}
@@ -300,7 +358,7 @@ export default function Dashboard() {
             
             <form onSubmit={handleAddTransaction} style={styles.modalForm}>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Descrição</label>
+                <label style={styles.label}>Descrição *</label>
                 <input
                   type="text"
                   placeholder="Ex: Salário, Aluguel, Supermercado..."
@@ -315,7 +373,7 @@ export default function Dashboard() {
               </div>
               
               <div style={styles.formGroup}>
-                <label style={styles.label}>Valor (R$)</label>
+                <label style={styles.label}>Valor (R$) *</label>
                 <input
                   type="number"
                   placeholder="0,00"
@@ -332,7 +390,7 @@ export default function Dashboard() {
               </div>
               
               <div style={styles.formGroup}>
-                <label style={styles.label}>Tipo</label>
+                <label style={styles.label}>Tipo *</label>
                 <select
                   value={newTransaction.type}
                   onChange={(e) => setNewTransaction({
@@ -340,6 +398,7 @@ export default function Dashboard() {
                     type: e.target.value as 'income' | 'expense'
                   })}
                   style={styles.modalInput}
+                  required
                 >
                   <option value="income">📥 Receita</option>
                   <option value="expense">📤 Despesa</option>
@@ -347,7 +406,7 @@ export default function Dashboard() {
               </div>
               
               <div style={styles.formGroup}>
-                <label style={styles.label}>Categoria</label>
+                <label style={styles.label}>Categoria *</label>
                 <input
                   type="text"
                   placeholder="Ex: Salário, Alimentação, Transporte..."
@@ -366,6 +425,7 @@ export default function Dashboard() {
                   type="button"
                   onClick={() => setShowAddTransaction(false)}
                   style={styles.cancelButton}
+                  disabled={isSaving}
                 >
                   Cancelar
                 </button>
@@ -373,10 +433,12 @@ export default function Dashboard() {
                   type="submit" 
                   style={{
                     ...styles.saveButton,
-                    backgroundColor: newTransaction.type === 'income' ? '#10b981' : '#ef4444'
+                    backgroundColor: newTransaction.type === 'income' ? '#10b981' : '#ef4444',
+                    opacity: isSaving ? 0.7 : 1
                   }}
+                  disabled={isSaving}
                 >
-                  💾 Salvar Transação
+                  {isSaving ? '⏳ Salvando...' : '💾 Salvar Transação'}
                 </button>
               </div>
             </form>
@@ -464,7 +526,6 @@ const styles = {
     cursor: 'pointer',
     fontWeight: '600',
     fontSize: '0.9rem',
-    transition: 'transform 0.2s',
   },
   
   logoutButton: {
@@ -476,7 +537,6 @@ const styles = {
     cursor: 'pointer',
     fontWeight: '600',
     fontSize: '0.9rem',
-    transition: 'transform 0.2s',
   },
   
   summarySection: {
@@ -604,7 +664,6 @@ const styles = {
     padding: '1rem',
     border: '1px solid #e2e8f0',
     borderRadius: '8px',
-    transition: 'border-color 0.2s',
   },
   
   transactionIcon: {
@@ -651,7 +710,6 @@ const styles = {
     fontSize: '1rem',
     padding: '0.5rem',
     borderRadius: '4px',
-    transition: 'background-color 0.2s',
   },
   
   statsTitle: {
@@ -813,18 +871,6 @@ if (typeof document !== 'undefined') {
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
-    }
-    
-    button:hover {
-      transform: translateY(-1px);
-    }
-    
-    .transaction-item:hover {
-      border-color: #00D2A0;
-    }
-    
-    .delete-button:hover {
-      background-color: #fee2e2;
     }
   `;
   document.head.appendChild(style);
