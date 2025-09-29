@@ -43,36 +43,47 @@ export default function Dashboard() {
     return () => unsubscribe();
   }, [router]);
 
+  
   const loadTransactions = async (userId: string) => {
-    try {
-      const q = query(
-        collection(db, "transactions"), 
-        where("userId", "==", userId),
-        orderBy("date", "desc")
-      );
-      const querySnapshot = await getDocs(q);
-      const transactionsData: Transaction[] = [];
-      
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        transactionsData.push({ 
-          id: doc.id, 
-          description: data.description,
-          amount: data.amount,
-          type: data.type,
-          category: data.category,
-          date: data.date
-        } as Transaction);
+  try {
+    console.log("📥 Carregando transações para usuário:", userId);
+    
+    const q = query(
+      collection(db, "transactions"), 
+      where("userId", "==", userId)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    console.log("📊 Transações encontradas:", querySnapshot.size);
+    
+    const transactionsData: Transaction[] = [];
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      transactionsData.push({ 
+        id: doc.id, 
+        description: data.description,
+        amount: data.amount,
+        type: data.type,
+        category: data.category,
+        date: data.date
       });
-      
-      setTransactions(transactionsData);
-    } catch (error) {
-      console.error("Erro ao carregar transações:", error);
-    }
-  };
-
+    });
+    
+    transactionsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    console.log("✅ Transações carregadas:", transactionsData);
+    setTransactions(transactionsData);
+    
+  } catch (error) {
+    console.error("❌ Erro ao carregar transações:", error);
+  }
+};
+  
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log("🎯 INICIANDO SALVAMENTO...");
     
     if (!user) {
       alert("Usuário não autenticado");
@@ -96,36 +107,53 @@ export default function Dashboard() {
     }
 
     setIsSaving(true);
+    console.log("🔄 Estado isSaving: TRUE");
 
     try {
-      console.log("Adicionando transação:", newTransaction);
+      console.log("📦 Preparando dados...");
       
-      await addDoc(collection(db, "transactions"), {
+      const transactionData = {
         description: newTransaction.description.trim(),
         amount: amountValue,
         type: newTransaction.type,
         category: newTransaction.category.trim(),
         date: new Date().toISOString(),
-        userId: user.uid
-      });
+        userId: user.uid,
+        createdAt: new Date().toISOString()
+      };
 
-      console.log("Transação adicionada com sucesso!");
+      console.log("🔥 Tentando salvar no Firestore...", transactionData);
+
+      const docRef = await addDoc(collection(db, "transactions"), transactionData);
       
+      console.log("✅ SUCESSO! Documento criado com ID:", docRef.id);
+
       setNewTransaction({
         description: '',
         amount: '',
         type: 'income',
         category: ''
       });
-      
+
+      console.log("📋 Fechando modal...");
       setShowAddTransaction(false);
-      
+
+      console.log("🔄 Recarregando transações...");
       await loadTransactions(user.uid);
-      
+
+      console.log("🎉 Processo completo!");
+
     } catch (error: any) {
-      console.error("Erro ao adicionar transação:", error);
-      alert("Erro ao adicionar transação. Verifique o console para mais detalhes.");
+      console.error("❌ ERRO CRÍTICO:", error);
+      console.error("Detalhes do erro:", {
+        code: error.code,
+        message: error.message,
+        stack: error.stack
+      });
+      
+      alert(`Erro ao salvar: ${error.message || "Verifique o console"}`);
     } finally {
+      console.log("🏁 Finalizando - isSaving: FALSE");
       setIsSaving(false);
     }
   };
@@ -457,6 +485,35 @@ const styles = {
     margin: '0 auto',
     fontFamily: "'Inter', sans-serif",
     backgroundColor: '#f8fafc',
+  },
+  
+  // NOVO: Container do botão de teste
+  testContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1rem',
+    marginBottom: '1rem',
+    padding: '1rem',
+    background: '#fef3c7',
+    border: '2px solid #f59e0b',
+    borderRadius: '8px',
+  },
+  
+  testButton: {
+    padding: '0.75rem 1.5rem',
+    background: '#f59e0b',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '0.9rem',
+  },
+  
+  testText: {
+    color: '#92400e',
+    fontSize: '0.9rem',
+    fontWeight: '500',
   },
   
   loadingContainer: {

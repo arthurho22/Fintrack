@@ -16,7 +16,7 @@ export default function SocialLogin() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       
-      // Verificar se é um novo usuário
+
       const userDoc = await getDoc(doc(db, "users", user.uid));
       
       if (!userDoc.exists()) {
