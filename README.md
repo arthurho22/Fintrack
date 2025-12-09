@@ -72,10 +72,10 @@ Com o seguinte modelo:
 
 - admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://SEU-PROJETO.firebaseio.com"
+  databaseURL: "https://Fintrack.firebaseio.com"
 });
 
-module.exports = admin;
+- module.exports = admin;
 
 ## ▶️ 4. Inicie o servidor
 - npm start
