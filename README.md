@@ -65,13 +65,12 @@ cd fintrack
 - npm install
 
 ## 🔥 3. Configure o Firebase
-Crie um arquivo:
-- /src/config/firebase.js
+Crie um arquivo: /src/config/firebase.js
 Com o seguinte modelo:
 - const admin = require("firebase-admin");
-const serviceAccount = require("../serviceAccountKey.json");
+- const serviceAccount = require("../serviceAccountKey.json");
 
-admin.initializeApp({
+- admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: "https://SEU-PROJETO.firebaseio.com"
 });
