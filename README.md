@@ -58,7 +58,7 @@ Projeto desenvolvido como prática de back-end, lógica de programação, conex�
 ## ⚙️ Como Rodar o Projeto Localmente
 
 ### 🔧 1. Clone o repositório
-git clone https://github.com/SEU-USUARIO/fintrack
+git clone https://github.com/arthurho22/fintrack
 cd fintrack
 
 ## 2. Instale as dependências
